@@ -1,4 +1,5 @@
 // PURE. Rules engine: turns the log into blunt, ranked verdicts, each with a concrete fix.
+// weightLimit: null turns all weight findings off.
 // A finding: { level: 'bad'|'warn'|'good', area, title, detail, fix }.
 
 import { SESSION_TYPES, addDays, weekStart, effectiveDate, isComplete } from './schedule.js';
@@ -198,7 +199,7 @@ export function analyze({ entries = [], sessions = [], bodyweight = [], debts = 
     ...volume(sessions, today, T),
     ...effort(sessions, today, T),
     ...running(sessions, today, T),
-    ...weight(bodyweight, today, weightLimit, T),
+    ...(weightLimit == null ? [] : weight(bodyweight, today, weightLimit, T)),
   ];
   return findings.sort((a, b) => RANK[a.level] - RANK[b.level]);
 }

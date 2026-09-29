@@ -1,6 +1,6 @@
 // Service worker: offline app shell + push notifications.
 // Bump VERSION whenever any shell file changes, or phones keep the old copy.
-const VERSION = 'forge-v1';
+const VERSION = 'forge-v2';
 const SHELL = [
   './', 'index.html', 'styles.css', 'manifest.webmanifest',
   'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png',

@@ -144,3 +144,8 @@ writing the charts and `frontend-design` for the UI.
   opens and logs; export JSON works.
 - Push: enable notifications on the installed app, trigger the Worker's test endpoint → a
   notification arrives on the locked phone; then confirm a real scheduled reminder fires.
+
+## Change log
+- 2026-09-29: Weight tracking made optional (Settings → "Watch my weight", off by default).
+  The user's competitions this year were cancelled. Off = no weigh-in card, no weight tile or
+  chart, no weight feedback. The 69 kg limit is kept for when it is switched back on.

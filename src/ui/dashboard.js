@@ -24,8 +24,8 @@ export function renderDashboard(root, { d, data }) {
         <div class="tile-note">${d.doneTotal} done · ${d.missedTotal} missed since ${esc(d.startDate)}</div></div>
       <div class="tile"><div class="tile-label">Streak</div><div class="tile-value num">${d.streak}</div><div class="tile-note">best ${d.bestStreak}</div></div>
       <div class="tile ${d.openDebts.length ? 'bad' : ''}"><div class="tile-label">Debt</div><div class="tile-value num">${d.openDebts.length}</div><div class="tile-note">penalties owed</div></div>
-      <div class="tile ${adh != null && adh < 80 ? 'bad' : ''}"><div class="tile-label">Adherence</div><div class="tile-value num">${adh ?? '–'}${adh != null ? '<small style="font-size:18px">%</small>' : ''}</div><div class="tile-note">last 4 weeks</div></div>
-      <div class="tile"><div class="tile-label">Weight</div><div class="tile-value num">${weightAvg7(data.bodyweight, today) ?? '–'}</div><div class="tile-note">7-day avg · limit ${settings.weightLimit}</div></div>
+      <div class="tile ${adh != null && adh < 80 ? 'bad' : ''}" ${settings.watchWeight ? '' : 'style="grid-column:1/-1"'}><div class="tile-label">Adherence</div><div class="tile-value num">${adh ?? '–'}${adh != null ? '<small style="font-size:18px">%</small>' : ''}</div><div class="tile-note">last 4 weeks</div></div>
+      ${settings.watchWeight ? `<div class="tile"><div class="tile-label">Weight</div><div class="tile-value num">${weightAvg7(data.bodyweight, today) ?? '–'}</div><div class="tile-note">7-day avg · limit ${settings.weightLimit}</div></div>` : ''}
     </div>
 
     <h2>Last week</h2>
@@ -44,7 +44,7 @@ export function renderDashboard(root, { d, data }) {
       ${lifts.length ? `<label class="field"><span>Lift</span><select id="lift">${lifts.map((l) => `<option ${l === selected ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>` : ''}
       <div id="c-lift"></div></div>
     <h2>Weekly volume (kg lifted)</h2><div class="card" id="c-vol"></div>
-    <h2>Bodyweight</h2><div class="card" id="c-weight"></div>
+    ${settings.watchWeight ? '<h2>Bodyweight</h2><div class="card" id="c-weight"></div>' : ''}
     <h2>Run pace (min/km)</h2><div class="card" id="c-pace"></div>
   `;
 
@@ -70,9 +70,11 @@ export function renderDashboard(root, { d, data }) {
     label: wkLabel(w.week), value: w.tonnage || null, tip: `${w.tonnage.toLocaleString('en-GB')} kg` })),
   { fmt: (v) => (v >= 1000 ? `${Math.round(v / 1000)}k` : Math.round(v)), emptyMsg: 'No lifting logged yet.' }));
 
+  if (settings.watchWeight) {
   const bw = data.bodyweight.slice().sort((a, b) => a.date.localeCompare(b.date)).slice(-60);
   put('#c-weight', lineChart(bw.map((b) => ({ x: b.date, y: +b.kg, tip: `${b.kg} kg` })),
     { ref: { y: settings.weightLimit, label: `limit ${settings.weightLimit} kg` }, fmt: (v) => v.toFixed(1), emptyMsg: 'Weigh in on the Today screen.' }));
+  }
 
   put('#c-pace', lineChart(runHistory(data.sessions).filter((r) => !r.intervals).map((r) => ({
     x: r.date, y: r.pace, tip: `${formatPace(r.pace)}/km · ${r.distanceKm} km` })),

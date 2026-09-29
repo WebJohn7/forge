@@ -27,6 +27,8 @@ export function renderSettings(root, { d, actions }) {
       <label class="field"><span>Missed gym</span><input type="text" name="gym" value="${esc(s.penalties.gym)}"></label>
       <label class="field"><span>Missed run</span><input type="text" name="run" value="${esc(s.penalties.run)}"></label>
       <p class="hint">A missed Sunday session owes both the gym and the TKD penalty.</p>
+      <label class="check"><input type="checkbox" name="watchWeight" ${s.watchWeight ? 'checked' : ''}> Watch my weight (competition category)</label>
+      <p class="hint">Off: no weigh-in, no weight stats or feedback. Turn on when you have a competition to make weight for.</p>
       <label class="field"><span>Weight category limit (kg)</span><input type="number" step="0.1" name="weightLimit" value="${esc(s.weightLimit)}"></label>
       <button class="btn primary" type="submit">Save</button>
     </form>
@@ -74,6 +76,7 @@ export function renderSettings(root, { d, actions }) {
     const f = new FormData(ev.target);
     await actions.saveSettings({
       penalties: { tkd: f.get('tkd'), gym: f.get('gym'), run: f.get('run') },
+      watchWeight: f.get('watchWeight') === 'on',
       weightLimit: parseFloat(f.get('weightLimit')) || 69,
     });
   });

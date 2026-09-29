@@ -74,7 +74,7 @@ export function renderToday(root, { d, data, actions, now }) {
   // Weigh-in
   const todayW = data.bodyweight.find((b) => b.date === today);
   const avg = weightAvg7(data.bodyweight, today);
-  parts.push(`<h2>Weigh-in</h2><form class="card" id="weigh">
+  if (settings.watchWeight) parts.push(`<h2>Weigh-in</h2><form class="card" id="weigh">
     <div class="card-row" style="align-items:flex-end">
       <label class="field" style="flex:1;margin:0"><span>Morning weight (kg)</span>
         <input type="number" inputmode="decimal" step="0.1" min="30" max="150" name="kg" value="${todayW ? todayW.kg : ''}" placeholder="68.0" required></label>
@@ -95,7 +95,7 @@ export function renderToday(root, { d, data, actions, now }) {
 
   root.innerHTML = parts.join('');
 
-  root.querySelector('#weigh').addEventListener('submit', async (ev) => {
+  root.querySelector('#weigh')?.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const kg = parseFloat(new FormData(ev.target).get('kg'));
     if (kg > 0) await actions.saveWeight(today, kg);

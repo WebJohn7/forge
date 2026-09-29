@@ -6,6 +6,7 @@ import { analyze, weeklyVerdict } from './feedback.js';
 
 export const DEFAULT_SETTINGS = {
   startDate: null,            // first day the rules apply; set on first launch
+  watchWeight: false,         // weight-category tracking; off while there are no competitions
   weightLimit: 69,
   penalties: DEFAULT_PENALTIES,
   schedule: DEFAULT_SCHEDULE,
@@ -35,7 +36,7 @@ export function compute({ sessions = [], bodyweight = [], debts = [], moves = []
   const allDebts = [...debts, ...createdDebts];
   const open = unpaid(allDebts).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const { score, history } = disciplineScore({ entries, debts: allDebts, startDate, now });
-  const findings = analyze({ entries, sessions, bodyweight, debts: allDebts, today, weightLimit: s.weightLimit });
+  const findings = analyze({ entries, sessions, bodyweight, debts: allDebts, today, weightLimit: s.watchWeight ? s.weightLimit : null });
   return {
     settings: s,
     today,

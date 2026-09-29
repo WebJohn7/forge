@@ -38,3 +38,12 @@ test('withDefaults merges partial settings', () => {
   assert.ok(s.penalties.tkd);
   assert.equal(s.weightLimit, 69);
 });
+
+test('weight watching is off by default and silences weight feedback', () => {
+  const bodyweight = [{ date: '2026-09-30', kg: 72 }];
+  const off = compute({ settings: {}, bodyweight, now: at('2026-09-30', 9) });
+  assert.equal(off.settings.watchWeight, false);
+  assert.equal(off.findings.filter((f) => f.area === 'Weight').length, 0);
+  const on = compute({ settings: { watchWeight: true }, bodyweight, now: at('2026-09-30', 9) });
+  assert.equal(on.findings.find((f) => f.area === 'Weight').level, 'bad'); // 72 kg over the 69 kg limit
+});

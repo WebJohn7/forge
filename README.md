@@ -9,9 +9,9 @@ Personal training tracker for iPhone. A web app (PWA): no App Store, no cost.
   and frozen until the debt is paid, discipline score −15 (and −2/day per unpaid penalty).
 - **Honest feedback:** rules engine on your log — stalled/regressing lifts, volume spikes,
   RPE too high/low, run pace, missing intervals, weight vs the 69 kg category, skipped-session
-  patterns. Offline, free.
+  patterns. Offline, free. (Weight vs the category limit only when "Watch my weight" is on in Settings.)
 - **Stats:** discipline score, streak, debt, adherence, e1RM per lift, weekly volume,
-  bodyweight, run pace.
+  bodyweight (when weight watching is on), run pace.
 - **Notifications** (optional): via a free Cloudflare Worker.
 
 ## 1. Put it online (GitHub Pages, free)
