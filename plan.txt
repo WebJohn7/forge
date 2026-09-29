@@ -149,3 +149,7 @@ writing the charts and `frontend-design` for the UI.
 - 2026-09-29: Weight tracking made optional (Settings → "Watch my weight", off by default).
   The user's competitions this year were cancelled. Off = no weigh-in card, no weight tile or
   chart, no weight feedback. The 69 kg limit is kept for when it is switched back on.
+- 2026-09-29: Notifications live. Worker `forge-push` on the user's Cloudflare account
+  (https://forge-push.nguyenhonza1301.workers.dev), KV namespace FORGE, cron every 15 min.
+  Phone subscribed via web.push.apple.com; test push received. Phone token changed to
+  5 typeable groups; VAPID subject is the app URL instead of an email address.

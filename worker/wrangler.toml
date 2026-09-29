@@ -8,7 +8,7 @@ compatibility_date = "2026-09-01"
 [triggers]
 crons = ["*/15 * * * *"]
 
-# Create with: npx wrangler kv namespace create FORGE   — then paste the id it prints here.
+# Created with: npx wrangler kv namespace create FORGE (the id is not a secret).
 [[kv_namespaces]]
 binding = "FORGE"
-id = "PASTE_KV_NAMESPACE_ID_HERE"
+id = "b920ed7712704232bae7eb7dff99d34a"

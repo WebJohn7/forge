@@ -36,26 +36,23 @@ iPhone web push needs iOS 16.4+ and the app opened from the Home Screen. A small
 Cloudflare Worker sends the reminders (06:30 morning session, 07:00 unpaid/unlogged,
 17:15 club days, 21:00 not logged yet, Sunday 20:00 weekly verdict).
 
+Live setup: `https://forge-push.nguyenhonza1301.workers.dev` (KV id in `worker/wrangler.toml`).
+Keys and the phone token are in `worker/.dev.vars` — git-ignored, never commit it.
+
+To set it up again from scratch:
+
 1. Create a free account at <https://dash.cloudflare.com/sign-up> (no card needed).
-2. In a terminal, from this folder:
+2. From `worker/`:
    ```powershell
-   node tools/vapid-keys.mjs            # prints VAPID_PUBLIC, VAPID_PRIVATE, TOKEN — keep them
-   cd worker
-   npx wrangler login                   # opens the browser once
-   npx wrangler kv namespace create FORGE
+   npx wrangler login                        # click Allow in the browser tab
+   npx wrangler kv namespace create FORGE    # paste the printed id into wrangler.toml
+   node ../tools/vapid-keys.mjs | Select-String "=" | Out-File -Encoding ascii .dev.vars
+   Add-Content .dev.vars "VAPID_SUBJECT=https://webjohn7.github.io/forge/"
+   npx wrangler deploy                       # needs a workers.dev subdomain on the account
+   node ../tools/push-secrets.mjs            # uploads .dev.vars as Worker secrets
    ```
-   Paste the printed `id` into `worker/wrangler.toml` (replace `PASTE_KV_NAMESPACE_ID_HERE`).
-3. Store the secrets (each command asks for the value):
-   ```powershell
-   npx wrangler secret put VAPID_PUBLIC
-   npx wrangler secret put VAPID_PRIVATE
-   npx wrangler secret put TOKEN
-   npx wrangler secret put VAPID_SUBJECT   # e.g. mailto:you@yourmail.com
-   npx wrangler deploy
-   ```
-   It prints the Worker URL, e.g. `https://forge-push.<you>.workers.dev`.
-4. On the iPhone: Forge → **Settings → Notifications** → paste the Worker URL and TOKEN →
-   **Save & enable** → allow notifications → **Send test**.
+3. On the iPhone: Forge (opened from the Home Screen icon) → **Settings → Notifications** →
+   Worker URL + TOKEN → **Save & enable** → Allow → **Send test**.
 
 Free-tier usage: ~100 cron runs/day and a handful of KV writes — far below the limits.
 
