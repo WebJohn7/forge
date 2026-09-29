@@ -1,0 +1,48 @@
+# CLAUDE.md
+
+Forge — personal training tracker PWA for the user's iPhone. `README.md` covers what it does
+and the deploy/install/notification setup. `plan.txt` is the agreed plan. This file covers how
+the code is arranged and what must not break.
+
+## Commands
+
+```bash
+npm test                   # node --test — the whole suite, zero dependencies
+py -m http.server 8138     # local serve; `npx serve` redirects index.html, which breaks the SW cache
+node tools/make-icons.mjs  # icons/*.png, pure Node
+cd worker && npx wrangler deploy --dry-run --outdir <tmp>   # check the Worker bundles
+```
+
+No build, no bundler, no `dependencies`. Hosted as static files on GitHub Pages.
+
+## Module split — the load-bearing boundary
+
+```
+src/schedule.js   PURE  week template, due sessions, status (done/late/pending/overdue/missed), moves
+src/penalties.js  PURE  miss → debt, payOldest, streak, discipline score
+src/stats.js      PURE  e1RM, tonnage, adherence, pace, weight avg/trend
+src/feedback.js   PURE  rules → ranked findings + weekly verdict (THRESHOLDS at top)
+src/model.js      PURE  compute(): stored data → everything the screens show; pushState()
+src/reminders.js  PURE  which push notifications are due now (used by the Worker only)
+src/store.js      browser  IndexedDB + export/import
+src/push.js       browser  subscribe + sync state to the Worker
+src/app.js        browser  load, derive, route (#today #log #dash #history #settings), all mutations
+src/ui/*.js       browser  one file per screen; charts.js = hand-rolled SVG charts
+sw.js             offline shell (SHELL list) + push/notificationclick
+worker/           Cloudflare Worker: index.js (routes + cron), webpush.js (VAPID + aes128gcm, WebCrypto only)
+```
+
+Pure modules import nothing browser-side and take `now` as an argument — keep new logic there
+and test it in Node. The Worker imports `src/reminders.js` directly (wrangler bundles it).
+
+## Invariants the tests assert
+
+- Status is judged on `effectiveDate` (the Thursday a session was moved to, else its own date);
+  grace ends 12:00 the next day. Misses are evaluated over every day since `startDate`, so not
+  opening the app never dodges a miss.
+- `newDebts` is idempotent (keyed by due id); the Sunday combo owes both gym and TKD penalties.
+- The streak does not grow for sessions logged while any debt was open.
+- Reminders fire at most once per key per day and never more than 60 min late.
+- `sw.js` SHELL must list every browser module (a test checks). Bump `VERSION` when shell files change.
+- Dark only. Chart colours follow the dataviz reference palette (dark steps); status colours
+  (good / warning / critical) are reserved for status and always paired with a text label.

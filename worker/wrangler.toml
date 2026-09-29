@@ -1,0 +1,14 @@
+# Cloudflare Worker for Forge notifications — free tier (Workers + KV + Cron Triggers).
+# Setup steps are in README.md → "Notifications".
+name = "forge-push"
+main = "index.js"
+compatibility_date = "2026-09-01"
+
+# Every 15 minutes. Each reminder fires once, in the first run at or after its time.
+[triggers]
+crons = ["*/15 * * * *"]
+
+# Create with: npx wrangler kv namespace create FORGE   — then paste the id it prints here.
+[[kv_namespaces]]
+binding = "FORGE"
+id = "PASTE_KV_NAMESPACE_ID_HERE"

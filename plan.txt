@@ -1,0 +1,146 @@
+# Plan — personal training app ("Forge") for iPhone, zero cost
+
+## Context
+You want one app, only for you on your iPhone, that:
+1. enforces a fixed training week, with consequences when you miss a session,
+2. logs workouts and gives blunt feedback on whether you are progressing and what to fix,
+3. shows a statistics dashboard.
+Hard constraint: no money spent.
+
+Decisions already made (from your answers + `Desktop/life/`):
+- **Schedule (all fixed days, 7 sessions/week, Thursday is the only rest day):**
+
+  | Day | Morning | Evening |
+  |---|---|---|
+  | Mon | Run | TKD club Ge-Baek 18:00–19:00 |
+  | Tue | Lower-body gym | — |
+  | Wed | — | TKD club 18:00–19:00 |
+  | Thu | rest | rest |
+  | Fri | Upper-body gym | — |
+  | Sat | Individual TKD at home | — |
+  | Sun | Full-body gym + TKD (one combined session) | — |
+
+  Weight category **≤ 69 kg**. All editable in Settings.
+- **Delivery:** a web app (PWA) opened in Safari and added to the Home Screen — no App Store,
+  no native build.
+- **Consequences:** penalty-workout debt + streak reset + a visible discipline ("shame") score.
+- **Feedback:** built-in rules engine — free, offline, no AI API.
+- **Language:** English.
+
+## Approach — a PWA, not a native app
+A native iOS app needs a Mac to build and, without the $99/yr developer account, expires every
+7 days. A **Progressive Web App** avoids both: plain HTML/CSS/JS, hosted free on **GitHub Pages**,
+opened once in Safari → *Share → Add to Home Screen*. It then runs full-screen with its own icon,
+works offline (service worker), and stores data on the phone (IndexedDB). Cost: 0.
+
+Same architecture as `Desktop/chord-hands`: **zero dependencies, no bundler, ES modules**, with a
+hard split between **pure logic** (testable in Node with `node --test`) and **browser code**.
+
+### Notifications — yes, free
+iOS 16.4+ supports **Web Push for web apps added to the Home Screen** (not in a plain Safari
+tab). The phone grants permission once; something on a server must then *send* the push at the
+right time. Zero-cost sender: a **Cloudflare Worker on the free tier** with a Cron Trigger
+(free, no card, accurate to the minute — GitHub Actions cron was rejected: it runs late by up
+to an hour and auto-disables after 60 days of repo inactivity).
+- Worker holds: your push subscription + VAPID keys (Worker secrets) and a copy of the schedule
+  in Workers KV (free tier). The app syncs "session logged" / "debt paid" flags to it, so the
+  Worker knows whether to nag.
+- Pushes: **06:30** morning-session reminder (Mon run, Tue lower, Fri upper, Sat TKD, Sun full-body),
+  **17:15** Mon/Wed "bus to TKD at 17:30", **21:00** "not logged yet — log it or it's a miss",
+  **next morning** "missed yesterday → you owe: 100 burpees…" and a weekly verdict on Sunday
+  evening. Times editable.
+- Code: `worker/` folder in the same repo, deployed with `npx wrangler deploy` (free tool).
+  Needs a free Cloudflare account — you create it; I don't sign up for anything.
+- Fallback if push ever fails: the app still shows today's obligation and debts on open.
+
+Known limits, stated up front:
+- Data lives only on the phone → built-in **Export / Import JSON** backup in Settings.
+- The "punishment" is self-enforced — the app can block your streak and show the damage, it
+  cannot physically make you do burpees.
+
+## Project location
+`C:\Users\Dell\Desktop\forge\` — own folder, own `CLAUDE.md`, own git repo (needed for Pages).
+First step of implementation: save this plan as `plan.txt` there. Add a row to the project map
+in `C:\Users\Dell\CLAUDE.md`. Creating the GitHub repo / pushing happens only when you say so.
+
+## File layout
+```
+forge/
+  index.html  manifest.webmanifest  sw.js  styles.css  icons/ (180, 192, 512 png)
+  src/
+    schedule.js    PURE  week template, which sessions are due on a date, what counts as missed
+    penalties.js   PURE  miss → debt items, debt payoff, streak, discipline score
+    stats.js       PURE  e1RM (Epley), weekly volume, adherence %, pace, 7-day weight avg
+    feedback.js    PURE  rules → ranked verdicts (good / warning / bad) with a concrete fix
+    store.js       IndexedDB wrapper + export/import JSON
+    app.js         router + wiring (Today / Log / Dashboard / History / Settings)
+    ui/*.js        views, hand-rolled SVG charts (no chart library)
+  test/*.test.js   node --test for every PURE module
+  CLAUDE.md  plan.txt  package.json (only "test": "node --test")
+```
+
+## Data model (IndexedDB)
+- `sessions`: `{id, date, type: tkd|gym|run|penalty, durationMin, rpe 1–10, notes,
+  exercises?: [{name, sets:[{reps, kg}]}], run?: {distanceKm, timeMin, intervals?}}`
+- `bodyweight`: `{date, kg}`
+- `debts`: `{id, createdFor (missed date+type), task, createdAt, paidAt|null}`
+- `settings`: schedule template, penalty table, weight limit, lift list.
+
+## Enforcement rules (`schedule.js`, `penalties.js`)
+- Every session is on a fixed day: a session is **missed** if it isn't logged by 23:59 that day
+  (late logging for the same date allowed until 12:00 next day, flagged "late").
+- Session types: `run`, `tkd-club`, `gym-lower`, `gym-upper`, `tkd-home`, `sunday-combo`
+  (full-body + TKD, logged as one session with both parts).
+- Moving a session is allowed only onto Thursday (the rest day), declared before the original
+  day ends — otherwise it's a miss.
+- Misses are evaluated when the app opens (catches up over any gap, so not opening the app
+  doesn't dodge anything).
+- **Penalty table (defaults, editable):** missed TKD (club/home) → 100 burpees + 20 min
+  shadow-boxing; missed gym → 150 push-ups + 150 squats; missed run → 5 km run; missed Sunday
+  combo → both gym and TKD penalties. Logging the penalty session
+  pays the oldest debt.
+- **Streak:** consecutive scheduled sessions completed; resets to 0 on any miss and **cannot
+  grow while any debt is unpaid**.
+- **Discipline score (0–100):** starts 100; −15 per miss, −2 per day per unpaid debt, +3 per
+  completed session (cap 100). Shown big and red when < 70.
+
+## Feedback rules (`feedback.js`) — blunt, each with a "do this" line
+- **Strength:** per lift, best e1RM over last 4 weeks vs previous 4 → progressing / stalled
+  (no e1RM gain in 3 sessions) / regressing. Stall → suggest deload or rep-range change.
+- **Volume:** weekly tonnage change > +30 % (injury risk) or < −20 % (slacking).
+- **Effort:** avg RPE ≥ 9 for 2 weeks → fatigue warning; ≤ 5 → "you're coasting".
+- **Run:** pace trend on comparable runs; no interval work in 3 weeks → flag.
+- **Weight:** 7-day average vs 69 kg limit — margin < 0.5 kg or rising trend → warning.
+- **Adherence:** 4-week % and pattern detection (e.g. "you miss the run 3 weeks in a row").
+- Weekly summary card: one-line verdict ("Solid week" / "You're lying to yourself") + top 3 fixes.
+
+## Screens
+- **Today:** what's due, debts owed, quota status, one-tap "Log it".
+- **Log:** type picker → form (gym: exercise/sets/reps/kg with last-session values prefilled;
+  run: km/time/intervals; TKD: duration/RPE/focus). Bodyweight quick entry.
+- **Dashboard:** discipline score, streak, debt count, 8-week adherence bars, e1RM line per
+  lift, weekly volume, weight vs 69 kg line, run pace, feedback list.
+- **History** (edit/delete) and **Settings** (schedule, penalties, lifts, export/import).
+Dark, mobile-first, safe-area insets for the iPhone notch; load the `dataviz` skill before
+writing the charts and `frontend-design` for the UI.
+
+## Implementation order
+1. Scaffold folder, `plan.txt`, `CLAUDE.md`, `package.json`, git init.
+2. Pure modules + tests: `schedule` → `penalties` → `stats` → `feedback`.
+3. `store.js`, then Today + Log screens (usable end-to-end).
+4. Dashboard + charts, History, Settings, export/import.
+5. PWA shell: manifest, icons, service worker (offline cache + `push` / `notificationclick`).
+6. With your OK: create GitHub repo, enable Pages, install on iPhone.
+7. Notifications: `worker/` (cron + web-push with VAPID, KV state), "Enable notifications"
+   button in Settings; you create the free Cloudflare account, then `npx wrangler deploy`.
+
+## Verification
+- `npm test` — all pure-module tests pass (misses across week boundaries, catch-up after days
+  of not opening, debt payoff order, streak blocked by debt, each feedback rule firing and not firing).
+- `npx serve .` on the PC, drive it in Chrome at iPhone viewport: log sessions, fake a missed
+  Monday by seeding data, confirm debt + score drop + streak reset + feedback text.
+- Lighthouse PWA check (installable, offline works).
+- On the iPhone: open the Pages URL in Safari → Add to Home Screen → airplane mode → app still
+  opens and logs; export JSON works.
+- Push: enable notifications on the installed app, trigger the Worker's test endpoint → a
+  notification arrives on the locked phone; then confirm a real scheduled reminder fires.

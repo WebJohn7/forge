@@ -1,0 +1,10 @@
+{
+  "name": "forge",
+  "version": "1.0.0",
+  "description": "Personal training tracker PWA — enforced schedule, penalty debt, honest feedback.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  }
+}
